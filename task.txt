@@ -1,0 +1,64 @@
+Tech stack
+Layer	Tool	Why
+API	Python, FastAPI	You already know it
+Auth	JWT (python-jose or PyJWT), passlib	Same pattern as ZOMATO NOTES
+Database	PostgreSQL, SQLAlchemy, Alembic	Alembic adds migrations, a new signal
+Cache	Hand-written LRU (dict + doubly linked list)	Algorithm evidence
+Testing	pytest, HTTPX/TestClient	Rollback and cache tests
+Containers	Docker, docker-compose	Closes the Docker gap
+Build tool	Makefile	Closes the build-tools gap
+CI/CD	GitHub Actions	Build image, run tests
+Deploy	Render (Docker)	Live demo link
+Load test	locust or a small Python script	Real hit-rate and timing numbers
+
+Database (3 tables)
+users (id, email, password_hash)
+links (id, user_id FK, short_code UNIQUE, original_url, click_count, created_at)
+clicks (id, link_id FK, clicked_at, user_agent)
+
+Endpoints
+POST /auth/register, POST /auth/login
+POST /links creates a short link (JWT required)
+GET /{short_code} redirects (public); this is the key endpoint
+GET /links/{id}/stats returns click count and recent clicks (owner only)
+
+Build steps
+Setup: repo, virtualenv, folders (routes/, models/, schemas/, services/, cache/, tests/). Work on feature branches from day one.
+Models and migrations: define the tables in SQLAlchemy, then run alembic init and alembic revision --autogenerate.
+Auth: register, login, JWT dependency.
+Short code: generate a random 6-7 char base62 code and retry on collision.
+Redirect with transaction: inside one DB transaction, insert a clicks row and increment click_count. Roll back if either fails, and write a test that forces a failure.
+Index measurement: seed about 100k links with a script, run EXPLAIN ANALYZE on the short_code lookup with and without the index, and save both timings in the README.
+LRU cache: implement get/put in O(1) with a hash map and doubly linked list, and put it in front of the redirect lookup. Don't use functools.lru_cache. Write unit tests for eviction order.
+Load test: hit the redirect endpoint with a skewed distribution (a few popular codes) and record the cache hit rate.
+Docker: Dockerfile for the API and docker-compose.yml with API plus Postgres. Add a Makefile with make up, make test, make migrate.
+CI/CD: a GitHub Actions workflow that builds the image, starts Postgres as a service, and runs pytest.
+Deploy: Render with Docker, and add the live URL to the README.
+Review: open 1-2 PRs and ask a batchmate to review them. Keep the comments as proof.
+
+Folder layout
+linksnap/
+├── app/
+│   ├── main.py
+│   ├── routes/        (auth.py, links.py, redirect.py)
+│   ├── models.py
+│   ├── schemas.py
+│   ├── services/      (shortcode.py, auth.py)
+│   └── cache/lru.py
+├── alembic/
+├── tests/
+├── scripts/seed.py
+├── Dockerfile
+├── docker-compose.yml
+├── Makefile
+└── .github/workflows/ci.yml
+
+Tips
+Keep the README short: setup, the EXPLAIN ANALYZE before and after numbers, and the cache hit rate. Those numbers fill the brackets in your resume bullets.
+Put the live demo and GitHub links in the resume only once both work.
+
+Database: 3 tables (users, links, clicks). A redirect inserts a click row and increments a counter in one transaction. An index on short_code can be measured with EXPLAIN ANALYZE.
+Algorithms: A hand-written LRU cache (hash map + doubly linked list, O(1)) for hot redirects.
+Docker/Linux/build tools: Dockerfile, docker-compose (API + Postgres), a Makefile, and deployment on Render with Docker.
+CI/CD: GitHub Actions builds the image and runs pytest.
+Collaboration: Work on feature branches, open PRs, and have one batchmate review them.
