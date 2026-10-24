@@ -55,17 +55,30 @@ make down
 
 ## Index measurement — `short_code` lookup on 100k rows
 
-Benchmark run against SQLite with 100 000 links and 500 lookups:
+Run against **Postgres 16** via `make measure` (100 000 rows, single lookup):
 
-| | Time (500 lookups) | Per lookup |
-|---|---|---|
-| **With** UNIQUE index on `short_code` | 266 ms | 0.53 ms |
-| **Without** index (seq scan) | 13 669 ms | 27.3 ms |
-| **Speedup** | **51×** | |
+| | Execution time |
+|---|---|
+| **With** UNIQUE index (`Index Scan`) | **0.071 ms** |
+| **Without** index (`Seq Scan`) | **19.478 ms** |
+| **Speedup** | **274×** |
 
-> On Postgres, run `make measure` to get the full `EXPLAIN ANALYZE` plan.
+```
+-- WITH index
+Index Scan using links_short_code_key on links
+  (cost=0.29..8.30 rows=1 width=4) (actual time=0.040..0.041 rows=1 loops=1)
+  Index Cond: ((short_code)::text = 'LHjXPy2'::text)
+Execution Time: 0.071 ms
 
-The `UNIQUE` constraint on `links.short_code` automatically creates a B-tree index, so the speedup is zero-config — it comes for free from the schema design.
+-- WITHOUT index
+Seq Scan on links
+  (cost=0.00..1321.76 rows=74 width=4) (actual time=0.017..19.454 rows=1 loops=1)
+  Filter: ((short_code)::text = 'LHjXPy2'::text)
+  Rows Removed by Filter: 99999
+Execution Time: 19.478 ms
+```
+
+The `UNIQUE` constraint on `links.short_code` automatically creates a B-tree index — the 274× speedup comes free from the schema design.
 
 ---
 
