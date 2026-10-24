@@ -7,15 +7,18 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.config import settings
 
 
-if settings.database_url.startswith("sqlite"):
+if settings.sqlalchemy_database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 else:
-    # Supabase (and most managed Postgres) require SSL from external hosts.
-    # sslmode=require is safe and works on Render, Railway, Fly.io, etc.
-    connect_args = {"sslmode": "require"}
+    # Force IPv4 and require SSL for Supabase on Render's free tier.
+    # Render free tier is IPv4-only; Supabase resolves to IPv6 by default.
+    connect_args = {
+        "sslmode": "require",
+        "gssencmode": "disable",
+    }
 
 engine = create_engine(
-    settings.database_url,
+    settings.sqlalchemy_database_url,
     pool_pre_ping=True,
     connect_args=connect_args,
     pool_size=5,

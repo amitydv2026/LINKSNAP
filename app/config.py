@@ -14,5 +14,13 @@ class Settings(BaseSettings):
     short_code_length: int = 7
     lru_cache_size: int = 10000
 
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        """Return the URL with the psycopg3 driver prefix."""
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
+
 
 settings = Settings()

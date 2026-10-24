@@ -11,7 +11,7 @@ from app.models import Click, Link, User  # noqa: F401  (register tables on meta
 config = context.config
 
 # Inject the runtime DB URL so migrations target the configured database.
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_url)
 
 if config.config_file_name:
     fileConfig(config.config_file_name)
