@@ -7,9 +7,20 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.config import settings
 
 
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+if settings.database_url.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+else:
+    # Supabase (and most managed Postgres) require SSL from external hosts.
+    # sslmode=require is safe and works on Render, Railway, Fly.io, etc.
+    connect_args = {"sslmode": "require"}
 
-engine = create_engine(settings.database_url, pool_pre_ping=True, connect_args=connect_args)
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    connect_args=connect_args,
+    pool_size=5,
+    max_overflow=10,
+)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
