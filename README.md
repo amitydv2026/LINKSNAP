@@ -2,8 +2,9 @@
 
 A production-style URL shortener built with FastAPI, PostgreSQL, SQLAlchemy, and a hand-written LRU cache.
 
-**Live demo:** _add after Render deploy_  
-**GitHub:** _add after repo is created_
+**Live demo:** https://linksnap-qvq6.onrender.com  
+**API docs:** https://linksnap-qvq6.onrender.com/docs  
+**GitHub:** https://github.com/amitydv2026/LINKSNAP
 
 ---
 
