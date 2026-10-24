@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkSnap — URL Shortener</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2e3147;
+      --accent:   #6c63ff;
+      --accent2:  #48cfad;
+      --danger:   #ff6b6b;
+      --text:     #e8eaf0;
+      --muted:    #7b7f9e;
+      --radius:   12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── NAV ── */
+    nav {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .logo { font-size: 1.4rem; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    #nav-status { font-size: 0.85rem; color: var(--muted); }
+    #logout-btn {
+      display: none;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: border-color .2s, color .2s;
+    }
+    #logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 30px;
+    }
+    .hero h1 { font-size: 2.8rem; font-weight: 800; line-height: 1.15; }
+    .hero h1 span { color: var(--accent); }
+    .hero p { margin-top: 14px; color: var(--muted); font-size: 1.05rem; max-width: 500px; }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin: 30px auto 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px;
+      width: fit-content;
+    }
+    .tab {
+      padding: 8px 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border: none;
+      background: none;
+      transition: background .2s, color .2s;
+    }
+    .tab.active { background: var(--accent); color: #fff; font-weight: 600; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      margin: 24px auto;
+    }
+    .card h2 { font-size: 1.2rem; margin-bottom: 20px; }
+
+    /* ── FORMS ── */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    label { font-size: 0.82rem; color: var(--muted); letter-spacing: .4px; }
+    input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: border-color .2s;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary { background: var(--border); color: var(--text); margin-top: 8px; }
+    .btn-secondary:hover { opacity: .8; }
+
+    /* ── SHORTEN PANEL ── */
+    #shorten-panel { display: none; }
+    .url-row { display: flex; gap: 8px; }
+    .url-row input { flex: 1; }
+    .url-row .btn { width: auto; padding: 10px 20px; }
+
+    /* ── RESULT ── */
+    .result-box {
+      margin-top: 20px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: none;
+    }
+    .result-box label { display: block; margin-bottom: 8px; }
+    .result-row { display: flex; gap: 8px; align-items: center; }
+    .result-row input { flex: 1; font-size: 0.9rem; }
+    .copy-btn {
+      padding: 8px 14px;
+      background: var(--accent2);
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: opacity .2s;
+    }
+    .copy-btn:hover { opacity: .85; }
+
+    /* ── LINKS LIST ── */
+    #links-list { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .link-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .link-card .code { font-weight: 700; color: var(--accent); font-size: 1rem; }
+    .link-card .orig { color: var(--muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .link-card .clicks { color: var(--accent2); font-size: 0.85rem; white-space: nowrap; }
+    .link-card a { color: inherit; text-decoration: none; }
+    .link-card a:hover .code { text-decoration: underline; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      transition: transform .3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: var(--accent2); color: var(--accent2); }
+    #toast.error   { border-color: var(--danger);  color: var(--danger); }
+
+    /* ── MISC ── */
+    .divider { text-align: center; color: var(--muted); font-size: 0.82rem; margin: 12px 0; }
+    .hidden { display: none !important; }
+    .stats-mini { margin-top: 20px; }
+    .stats-mini h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 10px; }
+
+    @media (max-width: 520px) {
+      nav { padding: 14px 20px; }
+      .hero h1 { font-size: 2rem; }
+      .card { padding: 22px 16px; margin: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Link<span>Snap</span></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span id="nav-status">Not logged in</span>
+    <button id="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Shorten. Share. <span>Track.</span></h1>
+  <p>Turn any long URL into a clean short link — and see every click in real time.</p>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="auth-tabs">
+  <button class="tab active" onclick="switchTab('login')">Login</button>
+  <button class="tab"        onclick="switchTab('register')">Register</button>
+</div>
+
+<!-- AUTH CARDS -->
+<div id="auth-section">
+
+  <!-- LOGIN -->
+  <div class="card" id="login-card">
+    <h2>Welcome back</h2>
+    <div class="field">
+      <label>EMAIL</label>
+      <input type="email" id="login-email" placeholder="you@example.com" />
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input type="password" id="login-password" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary" onclick="login()">Login</button>
+    <div class="divider">or</div>
+    <button class="btn btn-secondary" onclick="switchTab('register')">Create an account</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="card hidden" id="register-card">
+    <h2>Create account</h2>
+    <div class="field">
+      <label>EMAIL</label>
+      <input type="email" id="reg-email" placeholder="you@example.com" />
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input type="password" id="reg-password" placeholder="min 6 characters" />
+    </div>
+    <button class="btn btn-primary" onclick="register()">Create account</button>
+    <div class="divider">or</div>
+    <button class="btn btn-secondary" onclick="switchTab('login')">Already have an account</button>
+  </div>
+
+</div>
+
+<!-- SHORTEN PANEL (shown after login) -->
+<div id="shorten-panel" style="width:100%;max-width:480px;margin:0 auto;padding:0 20px 60px">
+
+  <div class="card">
+    <h2>Shorten a URL</h2>
+    <div class="url-row">
+      <input type="url" id="long-url" placeholder="https://your-very-long-url.com/..." />
+      <button class="btn btn-primary" onclick="shorten()">Shorten</button>
+    </div>
+
+    <div class="result-box" id="result-box">
+      <label>YOUR SHORT LINK</label>
+      <div class="result-row">
+        <input type="text" id="short-url-out" readonly />
+        <button class="copy-btn" onclick="copyLink()">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Your links</h2>
+    <div id="links-list">
+      <p style="color:var(--muted);font-size:0.9rem">No links yet — shorten something above!</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+  const BASE = '';   // empty = same origin (works both locally and on Render)
+
+  let token = localStorage.getItem('ls_token') || '';
+  let userEmail = localStorage.getItem('ls_email') || '';
+
+  // ── boot ──────────────────────────────────────────────────────────────────
+  if (token) showApp();
+
+  // ── tab switching ─────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('login-card').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-card').classList.toggle('hidden', tab !== 'register');
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+    });
+  }
+
+  // ── auth ──────────────────────────────────────────────────────────────────
+  async function register() {
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    if (!email || !password) return toast('Fill in all fields', 'error');
+    const res = await api('/auth/register', 'POST', { email, password });
+    if (res.ok) { toast('Account created! Logging you in…', 'success'); await loginWith(email, password); }
+    else toast((await res.json()).detail || 'Registration failed', 'error');
+  }
+
+  async function login() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) return toast('Fill in all fields', 'error');
+    await loginWith(email, password);
+  }
+
+  async function loginWith(email, password) {
+    const res = await api('/auth/login', 'POST', { email, password });
+    if (res.ok) {
+      const data = await res.json();
+      token = data.access_token;
+      userEmail = email;
+      localStorage.setItem('ls_token', token);
+      localStorage.setItem('ls_email', email);
+      showApp();
+    } else {
+      toast('Incorrect email or password', 'error');
+    }
+  }
+
+  function logout() {
+    token = ''; userEmail = '';
+    localStorage.removeItem('ls_token');
+    localStorage.removeItem('ls_email');
+    document.getElementById('shorten-panel').style.display = 'none';
+    document.getElementById('auth-section').classList.remove('hidden');
+    document.getElementById('auth-tabs').classList.remove('hidden');
+    document.getElementById('nav-status').textContent = 'Not logged in';
+    document.getElementById('logout-btn').style.display = 'none';
+    document.getElementById('result-box').style.display = 'none';
+  }
+
+  function showApp() {
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('auth-tabs').classList.add('hidden');
+    document.getElementById('shorten-panel').style.display = 'block';
+    document.getElementById('nav-status').textContent = userEmail;
+    document.getElementById('logout-btn').style.display = 'inline-block';
+    loadLinks();
+  }
+
+  // ── shorten ───────────────────────────────────────────────────────────────
+  async function shorten() {
+    const url = document.getElementById('long-url').value.trim();
+    if (!url) return toast('Paste a URL first', 'error');
+    const res = await api('/links', 'POST', { original_url: url }, token);
+    if (res.ok) {
+      const data = await res.json();
+      const short = window.location.origin + '/' + data.short_code;
+      document.getElementById('short-url-out').value = short;
+      document.getElementById('result-box').style.display = 'block';
+      document.getElementById('long-url').value = '';
+      toast('Short link created!', 'success');
+      loadLinks();
+    } else {
+      const err = await res.json();
+      toast(err.detail || 'Failed to shorten', 'error');
+    }
+  }
+
+  function copyLink() {
+    const val = document.getElementById('short-url-out').value;
+    navigator.clipboard.writeText(val).then(() => toast('Copied to clipboard!', 'success'));
+  }
+
+  // ── links list ────────────────────────────────────────────────────────────
+  async function loadLinks() {
+    // We don't have a GET /links endpoint yet, so we track IDs in localStorage
+    // and fetch stats for each one to display the list.
+    const ids = JSON.parse(localStorage.getItem('ls_link_ids') || '[]');
+    if (!ids.length) return;
+    const list = document.getElementById('links-list');
+    list.innerHTML = '';
+    for (const id of ids.slice(-10).reverse()) {
+      const res = await api('/links/' + id + '/stats', 'GET', null, token);
+      if (!res.ok) continue;
+      const d = await res.json();
+      const short = window.location.origin + '/' + d.short_code;
+      list.innerHTML += `
+        <div class="link-card">
+          <div>
+            <a href="${short}" target="_blank"><span class="code">/${d.short_code}</span></a>
+            <div class="orig">${d.original_url}</div>
+          </div>
+          <span class="clicks">↗ ${d.click_count} click${d.click_count !== 1 ? 's' : ''}</span>
+        </div>`;
+    }
+  }
+
+  // intercept POST /links to track IDs locally
+  const _origShorten = window.shorten;
+  window.shorten = async function() {
+    const url = document.getElementById('long-url').value.trim();
+    if (!url) return toast('Paste a URL first', 'error');
+    const res = await api('/links', 'POST', { original_url: url }, token);
+    if (res.ok) {
+      const data = await res.json();
+      // save link id
+      const ids = JSON.parse(localStorage.getItem('ls_link_ids') || '[]');
+      ids.push(data.id);
+      localStorage.setItem('ls_link_ids', JSON.stringify(ids));
+
+      const short = window.location.origin + '/' + data.short_code;
+      document.getElementById('short-url-out').value = short;
+      document.getElementById('result-box').style.display = 'block';
+      document.getElementById('long-url').value = '';
+      toast('Short link created!', 'success');
+      loadLinks();
+    } else {
+      const err = await res.json();
+      toast(err.detail || 'Failed to shorten', 'error');
+    }
+  };
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+  function api(path, method = 'GET', body = null, tok = '') {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(BASE + path, opts);
+  }
+
+  let toastTimer;
+  function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.className = '', 2800);
+  }
+
+  // allow pressing Enter in inputs
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const active = document.activeElement?.id;
+    if (active === 'login-email' || active === 'login-password') login();
+    if (active === 'reg-email'   || active === 'reg-password')   register();
+    if (active === 'long-url') window.shorten();
+  });
+</script>
+</body>
+</html>
