@@ -1,6 +1,6 @@
 """LinkSnap FastAPI application factory."""
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routes import auth, links, redirect
@@ -16,7 +16,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root() -> FileResponse:
     return FileResponse("static/index.html")
 
